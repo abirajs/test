@@ -219,7 +219,7 @@ class PaymentController extends Controller
             $this->sessionStorage->getPlugin()->setValue('nnGooglePayDoRedirect', $paymentRequestPostData['nn_google_pay_do_redirect']);
         }
         // Call the order creation function for the redirection
-        if(!empty($paymentRequestPostData['nn_cc3d_redirect']) || $paymentRequestPostData['nn_payment_key'] == 'NOVALNET_MBWAY' || (!empty($paymentRequestPostData['nn_google_pay_do_redirect']) && (string) $paymentRequestPostData['nn_google_pay_do_redirect'] === 'true')) {
+        if(!empty($paymentRequestPostData['nn_cc3d_redirect']) || (!empty($paymentRequestPostData['nn_google_pay_do_redirect']) && (string) $paymentRequestPostData['nn_google_pay_do_redirect'] === 'true')) {
             $paymentRequestData['paymentRequestData']['transaction']['return_url'] = $this->paymentService->getReturnPageUrl();
             $this->sessionStorage->getPlugin()->setValue('nnPaymentData', $paymentRequestData);
             if(!empty($paymentRequestPostData['nn_reinitializePayment']) || $this->settingsService->getPaymentSettingsValue('novalnet_order_creation') != true) {
@@ -238,6 +238,7 @@ class PaymentController extends Controller
                 $paymentResponseData = $this->paymentService->performServerCall();
                 if(!empty($paymentResponseData) && $paymentResponseData['result']['status'] != 'SUCCESS') {
                     $this->sessionStorage->getPlugin()->setValue('nnDoRedirect', null);
+			$this->sessionStorage->getPlugin()->setValue('nnGooglePayDoRedirect', null);
                     $this->paymentService->pushNotification($paymentResponseData['result']['status_text'], 'error', 100);
                     // return back to the customer on checkout page
                     return $this->response->redirectTo('checkout');
@@ -271,8 +272,10 @@ class PaymentController extends Controller
         $paymentResponseData = $this->paymentService->performServerCall();
         $paymentKey = $this->sessionStorage->getPlugin()->getValue('paymentkey');
         $nnDoRedirect = $this->sessionStorage->getPlugin()->getValue('nnDoRedirect');
+        $nnGooglePayDoRedirect = $this->sessionStorage->getPlugin()->getValue('nnGooglePayDoRedirect');
         $this->sessionStorage->getPlugin()->setValue('nnDoRedirect', null);
-        if($this->paymentService->isRedirectPayment($paymentKey) || !empty($nnDoRedirect)) {
+        $this->sessionStorage->getPlugin()->setValue('nnGooglePayDoRedirect', null);
+        if($this->paymentService->isRedirectPayment($paymentKey) || !empty($nnDoRedirect) || (!empty($nnGooglePayDoRedirect) && (string) $nnGooglePayDoRedirect === 'true')) {
             if(!empty($paymentResponseData) && !empty($paymentResponseData['result']['redirect_url']) && !empty($paymentResponseData['transaction']['txn_secret'])) {
                 // Transaction secret used for the later checksum verification
                 $this->sessionStorage->getPlugin()->setValue('nnTxnSecret', $paymentResponseData['transaction']['txn_secret']);
